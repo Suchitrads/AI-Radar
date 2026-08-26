@@ -197,7 +197,6 @@ nltk==3.9.1
 notebook==7.3.1
 notebook_shim==0.2.4
 numpy==2.2.3
-onnxruntime-directml==1.21.0
 openai==1.59.8
 opencv-contrib-python==4.10.0.84
 opencv-python==4.11.0.86
