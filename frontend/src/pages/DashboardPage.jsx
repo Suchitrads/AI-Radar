@@ -91,7 +91,7 @@ export default function DashboardPage({
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-cyan-400">
               <Sparkles className="h-4 w-4 text-cyan-400" />
-              <span>{greeting}, Analyst</span>
+              <span>{greeting}</span>
             </div>
 
             <h2 className="text-2xl md:text-3xl lg:text-4xl font-extrabold text-slate-100 tracking-tight">
