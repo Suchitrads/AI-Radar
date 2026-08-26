@@ -9,3 +9,4 @@ httpx==0.28.1
 feedparser
 rapidfuzz
 google-genai==2.18.1
+psycopg2-binary
