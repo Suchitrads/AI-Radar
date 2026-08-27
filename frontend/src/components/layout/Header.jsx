@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bell, Menu, Activity, ShieldCheck, Mic, Sun, Moon } from 'lucide-react';
+import { Search, Bell, Menu, Activity, ShieldCheck, Mic, Sun, Moon, X, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function Header({
@@ -15,17 +15,37 @@ export default function Header({
   const navigate = useNavigate();
   const [searchInput, setSearchInput] = useState(searchQuery);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [selectedNotification, setSelectedNotification] = useState(null);
   const [notifications, setNotifications] = useState([
-    { id: 1, title: 'Everyday Updates Sync', body: 'Daily RSS sources checked: 5 new stories downloaded.', time: '10m ago', route: '/latest' },
-    { id: 2, title: 'Impact Radar Evaluation', body: 'AI stack vulnerabilities analyzed on project dependencies.', time: '1h ago', route: '/impact-radar' },
-    { id: 3, title: 'Briefing Report Ready', body: 'Gemini synthesized summary of security changes.', time: '2h ago', route: '/important' }
+    {
+      id: 1,
+      title: 'Everyday Updates Sync',
+      body: 'Daily RSS sources checked: 5 new stories downloaded.',
+      time: '10m ago',
+      route: '/latest',
+      fullDescription: 'The AI RADAR collection engine successfully ran its scheduled scan across 15 active RSS intelligence feeds. A total of 5 fresh, high-impact stories regarding Gemini 1.5, OpenAI security policies, and FastAPI performance fixes were discovered, de-duplicated, and loaded. Match scores have been computed against your profile.'
+    },
+    {
+      id: 2,
+      title: 'Impact Radar Evaluation',
+      body: 'AI stack vulnerabilities analyzed on project dependencies.',
+      time: '1h ago',
+      route: '/impact-radar',
+      fullDescription: 'Gemini conducted a cross-dependency security audit on your registered projects. A new vulnerability was detected in a sub-dependency of PyTorch. The impact has been catalogued, and a mitigation recommendation (upgrading to v2.3.1) is now visible on the Impact Radar page.'
+    },
+    {
+      id: 3,
+      title: 'Briefing Report Ready',
+      body: 'Gemini synthesized summary of security changes.',
+      time: '2h ago',
+      route: '/important',
+      fullDescription: 'A comprehensive summary briefing is ready for review. This report synthesizes the 3 most significant security patches released in the past 24 hours, focusing on practical risk levels and action items for developers. The briefing score is calculated at 8.7/10.'
+    }
   ]);
 
-  const handleNotificationClick = (route) => {
-    if (route) {
-      navigate(route);
-      setIsNotificationsOpen(false);
-    }
+  const handleNotificationClick = (n) => {
+    setSelectedNotification(n);
+    setIsNotificationsOpen(false);
   };
 
   useEffect(() => {
@@ -159,7 +179,7 @@ export default function Header({
                   notifications.map((n) => (
                     <button
                       key={n.id}
-                      onClick={() => handleNotificationClick(n.route)}
+                      onClick={() => handleNotificationClick(n)}
                       className="w-full text-[11px] p-2.5 rounded-xl bg-slate-900/60 border border-white/5 hover:bg-slate-800/80 hover:border-cyan-500/30 active:scale-[0.98] transition-all text-left block cursor-pointer space-y-0.5"
                     >
                       <div className="flex items-center justify-between">
@@ -177,6 +197,65 @@ export default function Header({
           )}
         </div>
       </div>
+
+      {/* Notification Detail Modal */}
+      {selectedNotification && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4 animate-fade-in">
+          <div className="glass-panel w-full max-w-md rounded-3xl border border-white/10 bg-[#0A0D18]/95 p-6 space-y-4 shadow-2xl relative text-left">
+            <button
+              onClick={() => setSelectedNotification(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white cursor-pointer"
+              aria-label="Close details"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="flex items-center gap-2 pb-2 border-b border-white/5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-500/10 border border-cyan-500/30">
+                <Bell className="h-4 w-4 text-cyan-400" />
+              </div>
+              <div>
+                <h3 className="text-xs font-black uppercase text-slate-200 tracking-wider">
+                  System Intelligence Alert
+                </h3>
+                <span className="text-[9px] text-slate-500 font-semibold uppercase">
+                  {selectedNotification.time}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="text-sm font-extrabold text-slate-100">
+                {selectedNotification.title}
+              </h4>
+              <p className="text-xs text-slate-300 leading-relaxed bg-slate-900/60 p-4 rounded-2xl border border-white/5 select-text">
+                {selectedNotification.fullDescription}
+              </p>
+            </div>
+
+            {selectedNotification.route && (
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  onClick={() => setSelectedNotification(null)}
+                  className="rounded-xl border border-white/10 bg-slate-900 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    navigate(selectedNotification.route);
+                    setSelectedNotification(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 px-5 py-2 text-xs font-bold text-white shadow-lg shadow-cyan-500/20 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                >
+                  <span>Open Feed</span>
+                  <ArrowRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }

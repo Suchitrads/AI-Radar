@@ -19,6 +19,7 @@ export function useVoiceAssistant() {
   });
 
   const activeRecognitionRef = useRef(null);
+  const latestTranscriptRef = useRef('');
 
   // Synchronize query history with sessionStorage
   useEffect(() => {
@@ -97,6 +98,7 @@ export function useVoiceAssistant() {
     stopSpeaking();
     setError(null);
     setTranscript('');
+    latestTranscriptRef.current = '';
     setIsListening(true);
 
     let finalText = '';
@@ -104,6 +106,7 @@ export function useVoiceAssistant() {
     const rec = voiceService.startListening({
       onResult: ({ transcript: currentText, finalTranscript }) => {
         setTranscript(currentText);
+        latestTranscriptRef.current = currentText;
         if (finalTranscript) {
           finalText = finalTranscript;
         }
@@ -111,7 +114,7 @@ export function useVoiceAssistant() {
       onEnd: () => {
         setIsListening(false);
         activeRecognitionRef.current = null;
-        const textToSubmit = finalText || transcript;
+        const textToSubmit = finalText || latestTranscriptRef.current;
         if (textToSubmit && textToSubmit.trim()) {
           sendQuery(textToSubmit, projectId, storyId);
         } else {
@@ -128,7 +131,7 @@ export function useVoiceAssistant() {
     });
 
     activeRecognitionRef.current = rec;
-  }, [sendQuery, stopSpeaking, transcript]);
+  }, [sendQuery, stopSpeaking]);
 
   const reset = useCallback(() => {
     stopSpeaking();
