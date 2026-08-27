@@ -54,3 +54,11 @@ async def health_check():
         "service": "AI RADAR",
         "version": "1.0.0",
     }
+
+@app.get("/")
+def root():
+    return {
+        "status": "online",
+        "service": "AI Radar API",
+        "message": "Backend is running successfully"
+    }
