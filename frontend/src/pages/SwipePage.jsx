@@ -10,9 +10,14 @@ import {
 import SwipeDeck from '../components/swipe/SwipeDeck';
 import { Sparkles, SlidersHorizontal, Loader2, Check } from 'lucide-react';
 
-export default function SwipePage({ savedStoryIds, onToggleSave, onAnalyzeImpact }) {
+export default function SwipePage({
+  savedStoryIds,
+  likedStoryIds = [],
+  onToggleLike,
+  onToggleSave,
+  onAnalyzeImpact,
+}) {
   const [stories, setStories] = useState([]);
-  const [likedIds, setLikedIds] = useState(getLikedStoryIds());
   const [userInterests, setUserInterests] = useState(getUserInterests());
   const [loading, setLoading] = useState(true);
   const [showTopicsModal, setShowTopicsModal] = useState(false);
@@ -37,7 +42,7 @@ export default function SwipePage({ savedStoryIds, onToggleSave, onAnalyzeImpact
       const nonDuplicates = (rawStories || []).filter((s) => !s.is_duplicate);
 
       // Score stories using recommendation service
-      const recommended = getRecommendedStories(nonDuplicates, likedIds, userInterests);
+      const recommended = getRecommendedStories(nonDuplicates, likedStoryIds, userInterests);
       setStories(recommended);
     } catch (err) {
       console.error('Swipe stories fetch error:', err);
@@ -48,11 +53,12 @@ export default function SwipePage({ savedStoryIds, onToggleSave, onAnalyzeImpact
 
   useEffect(() => {
     fetchAndScoreStories();
-  }, [likedIds, userInterests]);
+  }, [userInterests]);
 
   const handleLike = (story) => {
-    const updated = toggleLikeStory(story.id);
-    setLikedIds(updated);
+    if (onToggleLike) {
+      onToggleLike(story);
+    }
   };
 
   const handleToggleInterest = (topic) => {
@@ -73,7 +79,10 @@ export default function SwipePage({ savedStoryIds, onToggleSave, onAnalyzeImpact
             <Sparkles className="h-5 w-5 text-cyan-400" />
             <span>AI Reel Swiper</span>
           </h2>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-400 hidden sm:block">
+            Swipe or use Arrow Keys (← Pass, → Like, ↑ Impact, ↓ Undo)
+          </p>
+          <p className="text-xs text-slate-400 sm:hidden">
             Swipe right to like, left to pass, up to analyze impact
           </p>
         </div>
@@ -140,6 +149,7 @@ export default function SwipePage({ savedStoryIds, onToggleSave, onAnalyzeImpact
           onAnalyzeImpact={onAnalyzeImpact}
           onBookmark={(story) => onToggleSave && onToggleSave(story)}
           savedStoryIds={savedStoryIds}
+          likedStoryIds={likedStoryIds}
         />
       )}
     </div>

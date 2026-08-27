@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Heart,
@@ -8,10 +8,8 @@ import {
   Sparkles,
   ExternalLink,
   Flame,
-  Building2,
-  Cpu,
   ArrowUpRight,
-  Info,
+  RotateCcw,
 } from 'lucide-react';
 import CategoryBadge from '../common/CategoryBadge';
 import ScoreBadge from '../common/ScoreBadge';
@@ -23,6 +21,7 @@ export default function SwipeDeck({
   onAnalyzeImpact,
   onBookmark,
   savedStoryIds = [],
+  likedStoryIds = [],
 }) {
   const navigate = useNavigate();
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -31,6 +30,61 @@ export default function SwipeDeck({
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const startPos = useRef({ x: 0, y: 0 });
+
+  // Touch conflict resolution refs
+  const isPointerDown = useRef(false);
+  const dragDirection = useRef(null); // 'horizontal' | 'vertical' | null
+  const scrollContainerRef = useRef(null);
+
+  const handleUndo = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex((prev) => prev - 1);
+    }
+  };
+
+  const currentStory = stories[currentIndex];
+  const nextStory = stories[currentIndex + 1];
+
+  // Keyboard navigation shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (
+        e.target.tagName === 'INPUT' ||
+        e.target.tagName === 'TEXTAREA' ||
+        e.target.tagName === 'SELECT'
+      ) {
+        return;
+      }
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          triggerSwipeAction('LEFT');
+          break;
+        case 'ArrowRight':
+          triggerSwipeAction('RIGHT');
+          break;
+        case 'ArrowUp':
+          triggerSwipeAction('UP');
+          break;
+        case 'ArrowDown':
+          handleUndo();
+          break;
+        case 'b':
+        case 'B':
+        case 's':
+        case 'S':
+          if (onBookmark && currentStory) onBookmark(currentStory);
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [currentIndex, currentStory, onBookmark]);
 
   if (!stories || stories.length === 0 || currentIndex >= stories.length) {
     return (
@@ -52,27 +106,62 @@ export default function SwipeDeck({
     );
   }
 
-  const currentStory = stories[currentIndex];
-  const nextStory = stories[currentIndex + 1];
-
   // Gesture handlers
   const handlePointerDown = (e) => {
-    setIsDragging(true);
+    isPointerDown.current = true;
+    dragDirection.current = null;
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     startPos.current = { x: clientX, y: clientY };
   };
 
   const handlePointerMove = (e) => {
-    if (!isDragging) return;
+    if (!isPointerDown.current) return;
+
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     const deltaX = clientX - startPos.current.x;
     const deltaY = clientY - startPos.current.y;
-    setDragOffset({ x: deltaX, y: deltaY });
+
+    if (dragDirection.current === null) {
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
+
+      if (absX > 10 || absY > 10) {
+        if (absX > absY) {
+          dragDirection.current = 'horizontal';
+          setIsDragging(true);
+        } else {
+          dragDirection.current = 'vertical';
+          const target = e.target;
+          const isInsideScrollable =
+            scrollContainerRef.current && scrollContainerRef.current.contains(target);
+
+          if (!isInsideScrollable) {
+            // Drag started outside scrollable content, allow vertical swipes
+            setIsDragging(true);
+          } else {
+            // Drag started inside scrollable content, let browser handle text scrolling
+            setIsDragging(false);
+          }
+        }
+      }
+    }
+
+    if (isDragging) {
+      if (dragDirection.current === 'horizontal') {
+        if (e.cancelable) e.preventDefault();
+        setDragOffset({ x: deltaX, y: 0 });
+      } else if (dragDirection.current === 'vertical') {
+        if (e.cancelable) e.preventDefault();
+        setDragOffset({ x: 0, y: deltaY });
+      }
+    }
   };
 
   const handlePointerEnd = () => {
+    isPointerDown.current = false;
+    dragDirection.current = null;
     if (!isDragging) return;
     setIsDragging(false);
 
@@ -115,6 +204,7 @@ export default function SwipeDeck({
   const showImpactOverlay = dragOffset.y < -40 && Math.abs(dragOffset.x) < 40;
 
   const isBookmarkSaved = savedStoryIds.includes(currentStory.id);
+  const isLiked = likedStoryIds.includes(currentStory.id);
 
   return (
     <div className="relative max-w-md mx-auto w-full px-2 py-4 select-none">
@@ -170,48 +260,52 @@ export default function SwipeDeck({
             </div>
           )}
 
-          {/* Top Card Info */}
-          <div>
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <CategoryBadge category={currentStory.category} subCategory={currentStory.sub_category} />
+          {/* Top Card Info Header (Non-scrollable) */}
+          <div className="flex items-center justify-between gap-2 mb-2 flex-shrink-0">
+            <CategoryBadge category={currentStory.category} subCategory={currentStory.sub_category} />
 
-              {/* Match Score Badge */}
-              {currentStory.matchScore && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-cyan-500/40 bg-cyan-500/15 px-3 py-1 text-xs font-bold text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.2)]">
-                  <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
-                  {currentStory.matchScore}% MATCH
-                </span>
-              )}
-            </div>
+            {/* Match Score Badge */}
+            {currentStory.matchScore && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-cyan-500/40 bg-cyan-500/15 px-3 py-1 text-xs font-bold text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.2)]">
+                <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+                {currentStory.matchScore}% MATCH
+              </span>
+            )}
+          </div>
 
-            {/* Title */}
-            <h2 className="text-lg md:text-xl font-extrabold text-slate-100 leading-snug line-clamp-3">
+          {/* Scrollable Content Body */}
+          <div
+            ref={scrollContainerRef}
+            className="flex-1 overflow-y-auto pr-1.5 space-y-3.5 min-h-0 select-text touch-pan-y custom-scroll"
+          >
+            {/* Title (No Line Clamp) */}
+            <h2 className="text-lg md:text-xl font-extrabold text-slate-100 leading-snug">
               {currentStory.title}
             </h2>
 
-            {/* Concise Summary */}
+            {/* Concise Summary (No Line Clamp) */}
             {currentStory.summary && (
-              <p className="mt-3 text-xs md:text-sm text-slate-300 line-clamp-3 leading-relaxed">
+              <p className="text-xs md:text-sm text-slate-300 leading-relaxed">
                 {currentStory.summary}
               </p>
             )}
 
-            {/* WHY IT MATTERS Block */}
+            {/* WHY IT MATTERS Block (No Line Clamp) */}
             {currentStory.why_it_matters && (
-              <div className="mt-4 rounded-2xl border border-violet-500/30 bg-gradient-to-r from-violet-950/40 via-slate-900 to-transparent p-3.5 backdrop-blur-md">
+              <div className="rounded-2xl border border-violet-500/30 bg-gradient-to-r from-violet-950/40 via-slate-900 to-transparent p-3.5 backdrop-blur-md">
                 <div className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-widest text-violet-400 mb-1">
                   <Sparkles className="h-3.5 w-3.5 text-violet-400" />
                   <span>WHY IT MATTERS</span>
                 </div>
-                <p className="text-xs text-slate-200 leading-snug line-clamp-2">
+                <p className="text-xs text-slate-200 leading-snug">
                   {currentStory.why_it_matters}
                 </p>
               </div>
             )}
           </div>
 
-          {/* Bottom Tags & Detail trigger */}
-          <div className="pt-3 border-t border-white/10 space-y-3">
+          {/* Bottom Tags & Detail trigger (Non-scrollable) */}
+          <div className="pt-3 border-t border-white/10 space-y-3 flex-shrink-0">
             <div className="flex items-center gap-2 flex-wrap">
               {currentStory.importance_score && (
                 <ScoreBadge label="Importance" score={currentStory.importance_score} size="sm" />
@@ -249,6 +343,20 @@ export default function SwipeDeck({
 
       {/* Swipe Control Buttons Bar */}
       <div className="mt-6 flex items-center justify-around max-w-sm mx-auto">
+        {/* Undo (Previous) */}
+        <button
+          onClick={handleUndo}
+          disabled={currentIndex === 0}
+          className={`flex h-12 w-12 items-center justify-center rounded-full border transition-all shadow-lg cursor-pointer ${
+            currentIndex === 0
+              ? 'border-white/5 bg-slate-950/20 text-slate-600 cursor-not-allowed'
+              : 'border-amber-500/30 bg-amber-500/5 text-amber-400 hover:bg-amber-500/10 hover:scale-110'
+          }`}
+          title="Previous story"
+        >
+          <RotateCcw className="h-5 w-5" />
+        </button>
+
         {/* Pass (Left) */}
         <button
           onClick={() => triggerSwipeAction('LEFT')}
@@ -283,12 +391,17 @@ export default function SwipeDeck({
         {/* Like (Right) */}
         <button
           onClick={() => triggerSwipeAction('RIGHT')}
-          className="flex h-14 w-14 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:scale-110 transition-all shadow-lg glow-cyan cursor-pointer"
+          className={`flex h-14 w-14 items-center justify-center rounded-full border transition-all shadow-lg cursor-pointer ${
+            isLiked
+              ? 'border-emerald-500/50 bg-emerald-500/20 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.2)]'
+              : 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 hover:scale-110'
+          }`}
           title="Like & Recommend"
         >
-          <Heart className="h-7 w-7 fill-emerald-500/20 text-emerald-400" />
+          <Heart className={`h-7 w-7 ${isLiked ? 'fill-emerald-400 text-emerald-300' : 'fill-emerald-500/20 text-emerald-400'}`} />
         </button>
       </div>
     </div>
   );
 }
+

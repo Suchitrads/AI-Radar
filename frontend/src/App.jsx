@@ -217,6 +217,8 @@ function AppLayout() {
               element={
                 <SwipePage
                   savedStoryIds={savedStoryIds}
+                  likedStoryIds={likedStoryIds}
+                  onToggleLike={handleToggleLike}
                   onToggleSave={handleToggleSave}
                   onAnalyzeImpact={handleTriggerImpactAnalysis}
                 />
