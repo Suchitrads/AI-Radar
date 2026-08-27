@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.database.database import Base, engine
+from app.database.database import Base, engine, SessionLocal
+from app.database.seed import seed_sources
 from app import models
 
 from app.api.sources import router as sources_router
@@ -15,6 +16,13 @@ from app.api.voice import router as voice_router
 
 
 Base.metadata.create_all(bind=engine)
+
+db = SessionLocal()
+
+try:
+    seed_sources(db)
+finally:
+    db.close()
 
 
 app = FastAPI(

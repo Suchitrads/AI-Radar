@@ -1,6 +1,5 @@
 import logging
 from unittest import result
-from unittest import result
 
 from sqlalchemy.orm import Session
 
