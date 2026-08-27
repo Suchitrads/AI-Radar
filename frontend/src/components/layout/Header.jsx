@@ -16,10 +16,17 @@ export default function Header({
   const [searchInput, setSearchInput] = useState(searchQuery);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([
-    { id: 1, title: 'Everyday Updates Sync', body: 'Daily RSS sources checked: 5 new stories downloaded.', time: '10m ago' },
-    { id: 2, title: 'Impact Radar Evaluation', body: 'AI stack vulnerabilities analyzed on project dependencies.', time: '1h ago' },
-    { id: 3, title: 'Briefing Report Ready', body: 'Gemini synthesized summary of security changes.', time: '2h ago' }
+    { id: 1, title: 'Everyday Updates Sync', body: 'Daily RSS sources checked: 5 new stories downloaded.', time: '10m ago', route: '/latest' },
+    { id: 2, title: 'Impact Radar Evaluation', body: 'AI stack vulnerabilities analyzed on project dependencies.', time: '1h ago', route: '/impact-radar' },
+    { id: 3, title: 'Briefing Report Ready', body: 'Gemini synthesized summary of security changes.', time: '2h ago', route: '/important' }
   ]);
+
+  const handleNotificationClick = (route) => {
+    if (route) {
+      navigate(route);
+      setIsNotificationsOpen(false);
+    }
+  };
 
   useEffect(() => {
     setSearchInput(searchQuery);
@@ -150,13 +157,17 @@ export default function Header({
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {notifications.length > 0 ? (
                   notifications.map((n) => (
-                    <div key={n.id} className="text-[11px] p-2 rounded-xl bg-slate-900/60 border border-white/5 space-y-0.5 text-left">
+                    <button
+                      key={n.id}
+                      onClick={() => handleNotificationClick(n.route)}
+                      className="w-full text-[11px] p-2.5 rounded-xl bg-slate-900/60 border border-white/5 hover:bg-slate-800/80 hover:border-cyan-500/30 active:scale-[0.98] transition-all text-left block cursor-pointer space-y-0.5"
+                    >
                       <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-300">{n.title}</span>
+                        <span className="font-bold text-slate-200">{n.title}</span>
                         <span className="text-[9px] text-slate-500">{n.time}</span>
                       </div>
                       <p className="text-slate-400 leading-relaxed">{n.body}</p>
-                    </div>
+                    </button>
                   ))
                 ) : (
                   <p className="text-xs text-slate-500 text-center py-4">No new notifications</p>
